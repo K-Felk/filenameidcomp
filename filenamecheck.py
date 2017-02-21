@@ -3,21 +3,22 @@ import csv
 import subprocess
 
 
-def getFileNames(path): #get the filenames from the directory
-        filenames = subprocess.check_output("ls " + path, shell=True, stderr=subprocess.STDOUT)
+def getFileNames(path): #get the filenames from the directory, strip off their file extensions, return a list
+        output = subprocess.check_output("ls " + path, shell=True, stderr=subprocess.STDOUT)
+        filenames = output.split("\n")
         cleanNames = []
-	for name in filenames:
-		fileNameEXrem = str.split(str=".")
-		cleanNames = fileNameEXrem[0]
-	return cleanNames
+        for name in filenames:
+                fileNameEXrem = name.split(".")
+                cleanNames.append(fileNameEXrem[0])
+        return cleanNames
 
 
-def nameCheck(identifiers, filenames): #return the URL request status code
-	badNames = []
-	for name in identifiers:
-		if name not in filenames:
-			badNames.append(name)
-	return badNames
+def nameCheck(list1, list2): #return filenames not in the second list
+        badNames = []
+        for name in list1:
+                if name not in list2:
+                        badNames.append(name)
+        return badNames
 
 def readIdentifiers(filename): #get the file identifiers from the metadata file.  They MUST be in the first column
         identifierList = []
@@ -31,23 +32,22 @@ def readIdentifiers(filename): #get the file identifiers from the metadata file.
 
         for row in metadataReader:
                 identifierList.append(row[0])
+        #assume first row in the csv is a header
         del identifierList[0]
-	return identifierList
+        return identifierList
 
 
-
-
-
-def logBadFileNames(badFileNames): #write bad URLS to a log file
+def logBadNames(badFileNames, logfilename): #write bad names to a log file
         try:
-                f = open('badFileNames.log', 'w')
+                f = open(logfilename, 'w')
         except IOError:
-                print("Unable to open logfile for writing")
+                print("Unable to open logfile " + logfilename + " for writing")
                 exit
         for name in badFileNames:
                 f.write(name + '\n')
         f.close()
         return 'true'
+#path to the csv file must be fIrst argument, path to the directory where the files are located is second.  FULL PATHS REQUIRED
 
 csvFile=sys.argv[1]
 path = sys.argv[2]
@@ -57,11 +57,23 @@ IDlist = readIdentifiers(csvFile)
 fileNames = getFileNames(path)
 
 
+#find entries in the metadata that don't match any files
 badNames = nameCheck(IDlist, fileNames)
 
+#log those bad boys
 if len(badNames) > 0:
-	logBadFileNames(badNames)
+        logBadNames(badNames, "not_in_directory.log")
 
-print("Identifier check complete, " + str(len(badNames)) + "bad identifiers found.");
-		
+#now do the same in the other direction: files that aren't in the metadata
+
+badFiles = nameCheck(fileNames, IDlist)
+
+#log those bad boys in a separate file
+if len(badFiles) > 0:
+    logBadNames(badFiles, "not_in_metadata.log")
+
+#...and we are done.
+
+print("Identifier check complete, " + str(len(badNames)) + " bad identifiers found, " + str(len(badFiles)) +  " missing files found. ");
+
 	

@@ -5,11 +5,14 @@ import subprocess
 
 
 def getFileNames(path): #get the filenames from the directory, strip off their file extensions, return a list
-	filenames = subprocess.check_output("ls " + path, shell=True, stderr=subprocess.STDOUT)
-    	cleanNames = []
+	output = subprocess.check_output("ls " + path, shell=True, stderr=subprocess.STDOUT)
+    	filenames = output.split("\n")
+
+	cleanNames = []
 	for name in filenames:
-		fileNameEXrem = name.split(".")
-		cleanNames = fileNameEXrem[0]
+		if len(name) > 0:
+			fileNameEXrem = name.split(".")
+			cleanNames.append(fileNameEXrem[0])
 
 	return cleanNames
 
@@ -24,7 +27,7 @@ def nameCheck(list1, list2): #return filenames not in the second list
 def readIdentifiers(filename): #get the file identifiers from the metadata file.  They MUST be in the first column
 	identifierList = []
     	try:
-        	f = open(filename, 'r')
+		f = open(filename, 'r')
     	except IOError:
         	print("Unable to open CSV file for reading " + filename);
         	exit
@@ -33,12 +36,10 @@ def readIdentifiers(filename): #get the file identifiers from the metadata file.
 
     	for row in metadataReader:
         	identifierList.append(row[0])
-        	#assume first row in the csv is a header
-        	del identifierList[0]
-		return identifierList
-
-
-
+        #assume first row in the csv is a header
+        del identifierList[0]
+	
+	return identifierList
 
 
 def logBadNames(badFileNames, logfilename): #write bad names to a log file
